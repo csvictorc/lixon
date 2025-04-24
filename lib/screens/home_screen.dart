@@ -15,7 +15,6 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   List<dynamic> _locais = [];
   Position? _posicaoAtual;
-  String? _localizacaoAtual;
 
   double _distanciaMaxima = 10.0;
   int _numeroResultadosMaximos = 10;
@@ -56,10 +55,6 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _locais = carregados;
         _posicaoAtual = posicao;
-        if (posicao != null) {
-          _localizacaoAtual =
-          'Lat: ${posicao.latitude.toStringAsFixed(4)}, Lng: ${posicao.longitude.toStringAsFixed(4)}';
-        }
         _filtrarLocais();
       });
     }
@@ -138,23 +133,35 @@ class _HomeScreenState extends State<HomeScreen> {
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
         ),
-        title: Text.rich(
-          TextSpan(
-            children: [
-              const TextSpan(
-                text: 'Locais ',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-              TextSpan(
-                text: 'de Descarte',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: corTextoPrimario.withOpacity(0.9),
-                ),
-              ),
-            ],
-          ),
+        leading: IconButton(
+          icon: const Icon(Icons.help_outline),
+          onPressed: () {
+            showDialog(
+              context: context,
+              builder: (context) {
+                return AlertDialog(
+                  title: const Text('Sobre os resultados'),
+                  content: const Text(
+                    'Este projeto foi desenvolvido por uma pessoa e pode apresentar resultados imprecisos. '
+                        'Recomenda-se sempre confirmar as informações com o estabelecimento por telefone ou email antes de se deslocar até o local.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Entendi'),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+          tooltip: 'Ajuda',
+          color: corTextoPrimario,
+        ),
+        title: Text(
+          'Locais próximos:',
           style: TextStyle(
+            fontWeight: FontWeight.w600,
             fontSize: 20,
             color: corTextoPrimario,
           ),
@@ -179,17 +186,6 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (_localizacaoAtual != null)
-              Text(
-                'Sua localização: $_localizacaoAtual',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-            const SizedBox(height: 24),
-            Text(
-              '${_locaisFiltrados.length} ${_locaisFiltrados.length == 1 ? 'local' : 'locais'} de descarte encontrado${_locaisFiltrados.length == 1 ? '' : 's'} (até ${_distanciaMaxima.toStringAsFixed(0)}km):',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
             Expanded(
               child: _locaisFiltrados.isEmpty
                   ? const Center(child: Text("Nenhum local encontrado com os filtros atuais."))
