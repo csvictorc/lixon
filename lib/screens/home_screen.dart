@@ -15,6 +15,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   List<dynamic> _locais = [];
   Position? _posicaoAtual;
+  String? _localizacaoAtual;
 
   double _distanciaMaxima = 10.0;
   int _numeroResultadosMaximos = 10;
@@ -55,6 +56,10 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _locais = carregados;
         _posicaoAtual = posicao;
+        if (posicao != null) {
+          _localizacaoAtual =
+          'Lat: ${posicao.latitude.toStringAsFixed(4)}, Lng: ${posicao.longitude.toStringAsFixed(4)}';
+        }
         _filtrarLocais();
       });
     }
@@ -69,26 +74,39 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     final locaisProximos = _locais.where((local) {
+      final lat = (local['lat'] is String) ? double.tryParse(local['lat']) : local['lat'];
+      final lng = (local['lng'] is String) ? double.tryParse(local['lng']) : local['lng'];
+
+      if (lat == null || lng == null) return false;
+
       final distancia = LocationHelper.calcularDistancia(
         _posicaoAtual!.latitude,
         _posicaoAtual!.longitude,
-        local['lat'].toDouble(),
-        local['lng'].toDouble(),
+        lat.toDouble(),
+        lng.toDouble(),
       );
       return distancia <= _distanciaMaxima;
     }).toList()
       ..sort((a, b) {
+        final latA = (a['lat'] is String) ? double.tryParse(a['lat']) : a['lat'];
+        final lngA = (a['lng'] is String) ? double.tryParse(a['lng']) : a['lng'];
+        final latB = (b['lat'] is String) ? double.tryParse(b['lat']) : b['lat'];
+        final lngB = (b['lng'] is String) ? double.tryParse(b['lng']) : b['lng'];
+
+        if (latA == null || lngA == null) return 1;
+        if (latB == null || lngB == null) return -1;
+
         final distanciaA = LocationHelper.calcularDistancia(
           _posicaoAtual!.latitude,
           _posicaoAtual!.longitude,
-          a['lat'].toDouble(),
-          a['lng'].toDouble(),
+          latA.toDouble(),
+          lngA.toDouble(),
         );
         final distanciaB = LocationHelper.calcularDistancia(
           _posicaoAtual!.latitude,
           _posicaoAtual!.longitude,
-          b['lat'].toDouble(),
-          b['lng'].toDouble(),
+          latB.toDouble(),
+          lngB.toDouble(),
         );
         return distanciaA.compareTo(distanciaB);
       });
@@ -98,51 +116,60 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+
   @override
   Widget build(BuildContext context) {
+
+    final Color corPrimaria = Colors.green;
+    final Color corTextoPrimario = Colors.white;
+
     if (_posicaoAtual == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        body: Center(child: CircularProgressIndicator(color: corPrimaria)),
       );
     }
 
     return Scaffold(
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.green,
-        surfaceTintColor: Colors.green,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(
-            bottom: Radius.circular(24),
-          ),
-        ),
+        backgroundColor: corPrimaria,
+        surfaceTintColor: corPrimaria,
         centerTitle: true,
-        //--------------------
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
+        ),
         title: Text.rich(
           TextSpan(
             children: [
               const TextSpan(
-                text: 'Locais próximos',
+                text: 'Locais ',
                 style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              TextSpan(
+                text: 'de Descarte',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: corTextoPrimario.withOpacity(0.9),
+                ),
               ),
             ],
           ),
           style: TextStyle(
             fontSize: 20,
-            color: Theme.of(context).colorScheme.onPrimary,
+            color: corTextoPrimario,
           ),
         ),
         iconTheme: IconThemeData(
-          color: Theme.of(context).colorScheme.onPrimary,
+          color: corTextoPrimario,
         ),
         actionsIconTheme: IconThemeData(
-          color: Theme.of(context).colorScheme.onPrimary,
+          color: corTextoPrimario,
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.filter_list),
             onPressed: () {
-              _mostrarMenuFiltros(context);
+              _mostrarMenuFiltros(context, corPrimaria, corTextoPrimario);
             },
           ),
         ],
@@ -152,16 +179,38 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (_localizacaoAtual != null)
+              Text(
+                'Sua localização: $_localizacaoAtual',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            const SizedBox(height: 24),
+            Text(
+              '${_locaisFiltrados.length} ${_locaisFiltrados.length == 1 ? 'local' : 'locais'} de descarte encontrado${_locaisFiltrados.length == 1 ? '' : 's'} (até ${_distanciaMaxima.toStringAsFixed(0)}km):',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
             Expanded(
-              child: ListView.builder(
+              child: _locaisFiltrados.isEmpty
+                  ? const Center(child: Text("Nenhum local encontrado com os filtros atuais."))
+                  : ListView.builder(
                 itemCount: _locaisFiltrados.length,
                 itemBuilder: (context, index) {
                   final local = _locaisFiltrados[index];
+
+                  final lat = (local['lat'] is String) ? double.tryParse(local['lat']) : local['lat'];
+                  final lng = (local['lng'] is String) ? double.tryParse(local['lng']) : local['lng'];
+
+                  if (lat == null || lng == null) {
+
+                    return const SizedBox.shrink();
+                  }
+
                   final distancia = LocationHelper.calcularDistancia(
                     _posicaoAtual!.latitude,
                     _posicaoAtual!.longitude,
-                    local['lat'].toDouble(),
-                    local['lng'].toDouble(),
+                    lat.toDouble(),
+                    lng.toDouble(),
                   );
 
                   return LixoCard(
@@ -170,9 +219,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () {
                       MapsLauncherHelper.abrirNoGoogleMaps(
                         context: context,
-                        lat: local['lat'].toDouble(),
-                        lng: local['lng'].toDouble(),
-                        nome: local['name'],
+                        lat: lat.toDouble(),
+                        lng: lng.toDouble(),
+                        nome: local['name'] ?? 'Local sem nome',
                       );
                     },
                   );
@@ -185,7 +234,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _mostrarMenuFiltros(BuildContext context) {
+  void _mostrarMenuFiltros(BuildContext context, Color corPrimaria, Color corTextoBotao) {
     double tempDistancia = _distanciaMaxima;
     int tempResultados = _numeroResultadosMaximos;
 
@@ -213,55 +262,41 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 20),
                   Text('Distância máxima: ${tempDistancia.toStringAsFixed(1)} km'),
-                  SliderTheme(
-                    data: SliderTheme.of(context).copyWith(
-                      activeTrackColor: Colors.green,
-                      inactiveTrackColor: Colors.green.shade100,
-                      thumbColor: Colors.green,
-                      overlayColor: Colors.green.withAlpha(32),
-                      valueIndicatorColor: Colors.green,
-                    ),
-                    child: Slider(
-                      value: tempDistancia,
-                      min: 1,
-                      max: 50,
-                      divisions: 49,
-                      label: tempDistancia.toStringAsFixed(1),
-                      onChanged: (value) {
-                        setStateBottomSheet(() {
-                          tempDistancia = value;
-                        });
-                      },
-                    ),
+                  Slider(
+                    value: tempDistancia,
+                    min: 1,
+                    max: 50,
+                    divisions: 49,
+                    label: tempDistancia.toStringAsFixed(1),
+                    activeColor: corPrimaria,
+                    inactiveColor: corPrimaria.withOpacity(0.3),
+                    onChanged: (value) {
+                      setStateBottomSheet(() {
+                        tempDistancia = value;
+                      });
+                    },
                   ),
                   const SizedBox(height: 12),
                   Text('Mostrar no máximo: $tempResultados resultados'),
-                  SliderTheme(
-                    data: SliderTheme.of(context).copyWith(
-                      activeTrackColor: Colors.green,
-                      inactiveTrackColor: Colors.green.shade100,
-                      thumbColor: Colors.green,
-                      overlayColor: Colors.green.withAlpha(32),
-                      valueIndicatorColor: Colors.green,
-                    ),
-                    child: Slider(
-                      value: tempResultados.toDouble(),
-                      min: 1,
-                      max: 20,
-                      divisions: 19,
-                      label: tempResultados.toString(),
-                      onChanged: (value) {
-                        setStateBottomSheet(() {
-                          tempResultados = value.toInt();
-                        });
-                      },
-                    ),
+                  Slider(
+                    value: tempResultados.toDouble(),
+                    min: 1,
+                    max: 20,
+                    divisions: 19,
+                    label: tempResultados.toString(),
+                    activeColor: corPrimaria,
+                    inactiveColor: corPrimaria.withOpacity(0.3),
+                    onChanged: (value) {
+                      setStateBottomSheet(() {
+                        tempResultados = value.toInt();
+                      });
+                    },
                   ),
                   const SizedBox(height: 20),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
+                      backgroundColor: corPrimaria,
+                      foregroundColor: corTextoBotao,
                     ),
                     child: const Text('Salvar'),
                     onPressed: () {

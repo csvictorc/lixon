@@ -4,10 +4,9 @@
     <uses-permission android:name="android.permission.INTERNET"/>
 
     <application
-        android:label="LixoOn"
+        android:label="LixOn"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher"
-        android:enableOnBackInvokedCallback="true">
+        android:icon="@mipmap/ic_launcher">
 
         <activity
             android:name=".MainActivity"

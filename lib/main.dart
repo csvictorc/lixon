@@ -32,7 +32,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-
+    // Garantir que o timer é executado sem sobrecarregar a main thread
     Future.delayed(const Duration(seconds: 1), () {
       Navigator.pushReplacement(
         context,
